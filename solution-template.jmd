@@ -30,10 +30,10 @@ ash = [0.08; 0.07; 0.05; 0.1; 0.15; 0.02; 0.02; 1; 1; 1; 1; 0.7]
 type = [0.15; 0.4; 0.05; 0.03; 0.02; 0.05; 0.18; 0.04; 0.02; 0.02; 0.01; 0.03]
 
 # find overall fraction recycled by multiplying by waste composition
-fracR = recycled.*type
+fracR = sum(recycled.*type)
 
 # find overall combustion ash fraction = ash fraction * (mass - mass recycled)
-fracA = ash.*(type - recycled.*type)
+fracA = sum(ash.*(type - recycled.*type))
 ```
 
 ## Problem 1.2
@@ -162,6 +162,7 @@ R_{k,j} \geq 0
 # setting up model definition
 using JuMP
 using Cbc
+
 citywaste = Model(Cbc.Optimizer)
 
 I = 1:2     # number of cities
@@ -180,13 +181,15 @@ TC = [60; 7; 50]            # tipping cost, ($/Mg)
 RC = 45                     # recycling cost at site 2, ($/Mg)
 
 # waste streams flowing into each site j
-In = [W[1,1] + W[2,1] + R[2,1], W[1,2] + W[2,2], W[1,3] + W[2,3] + R[1,3] + R[2,3]]
+In1 = W[1,1] + W[2,1] + R[2,1]
+In2 = W[1,2] + W[2,2]
+In3 = W[1,3] + W[2,3] + R[1,3] + R[2,3]
 
 # transport cost
 Ztspt = 1.5*(15*W[1,1] + 10*W[2,1] + 5*W[1,2] + 15*W[2,2] + 30*W[1,3] + 25*W[2,3] + 15*R[2,1] + 32*R[2,3] + 18*R[1,3])
 
 # objective eqn
-Zcost = sum(TC.*In) + RC*fracR*In[2] + sum(FC.*Y) + Ztspt
+Zcost = 60*In1 + 7*In2 + 50*In3 + RC*In2*fracR + sum(FC.*Y) + Ztspt
 @objective(citywaste, Min, Zcost)
 
 # constraints
@@ -194,18 +197,20 @@ Zcost = sum(TC.*In) + RC*fracR*In[2] + sum(FC.*Y) + Ztspt
 @constraint(citywaste, city[i in I], sum(W[i,:]) == S[i])
 
 # 2 - mass balance on residuals
-@constraint(citywaste, WTEsite, R[1,3] == 0.2.*In[1])
-@constraint(citywaste, MRFsite, R[2,1] + R[2,3] == 0.6.*(W[1,2] + W[2,2]))
+@constraint(citywaste, WTEsite, R[1,3] == 0.2*In1)
+@constraint(citywaste, MRFsite, R[2,1] + R[2,3] == 0.6*(W[1,2] + W[2,2]))
 @constraint(citywaste, LFsite, sum(R[3,:]) == 0)
 @constraint(citywaste, noresiddiag, sum(R[j,j] for j in J) == 0)    # make sure no repeats
 @constraint(citywaste, noresid, R[1,2] == 0)        # don't send anything from WTE to MRF - just ash
 
 # 3 - capacity
-@constraint(citywaste, cap, In[j] .<= C[j])
+@constraint(citywaste, cap1, In1 <= C[1])
+@constraint(citywaste, cap2, In2 <= C[2])
+@constraint(citywaste, cap3, In3 <= C[3])
 
 #4 - make sure Y variables are binary
-@constraint(citywaste, y1, !Y[1] => {In[1] = 0})
-@constraint(citywaste, y2, !Y[2] => {In[2] = 0})
+#@constraint(citywaste, y1, !Y[1] => {In1 = 0})
+#@constraint(citywaste, y2, !Y[2] => {In2 = 0})
 @constraint(citywaste, y3, Y[3] == 1)
 ```
 
@@ -213,14 +218,22 @@ Zcost = sum(TC.*In) + RC*fracR*In[2] + sum(FC.*Y) + Ztspt
 ```julia
 
 # solve model
+set_silent(citywaste)
 optimize!(citywaste)
 
-# get answers
+# get answers - objective value
 Zmin = objective_value(citywaste)
-value.(W)
-value.(R)
-value.(Y)
+println("Min. cost is : ", Zmin)
 
+# decision variables
+Wans = value.(W)
+println(Wans)
+
+Rans = value.(R)
+println(Rans)
+
+Yans = value.(Y)
+println(Yans)
 
 ```
 
