@@ -258,8 +258,7 @@ Z_{\text{transport}} = 1.5*[15W_{1,1} + 10W_{2,1} + 5W_{1,2} + 15W_{2,2} + 30W_{
 Z_{\text{total}} = Z_{\text{WTE}} + Z_{\text{MRF}} + Z_{\text{LF}} + Z_{\text{transport}} \\
 \\ 
 \begin{align*}
-Z_{\text{total}} = TC_1*(W_{1,1} + W_{2,1} + R_{2,1}) + FC_1 * Y_1 \\
-                 + (TC_2 + RC * \text{fracR})*(W_{1,2} + W_{2,2}) + FC_2 * Y_2 \\
+Z_{\text{total}} = TC_1*(W_{1,1} + W_{2,1} + R_{2,1}) + FC_1 * Y_1 + (TC_2 + RC * \text{fracR})*(W_{1,2} + W_{2,2}) + FC_2 * Y_2 \\
                  + TC_3*(W_{1,3} + W_{2,3} + R_{1,3} + R_{2,3}) + FC_3 * Y_3 \\
                  + 1.5*[15W_{1,1} + 10W_{2,1} + 5W_{1,2} + 15W_{2,2} + 30W_{1,3} + 25W_{2,3} + 15R_{2,1} + 32R_{2,3} + 18R_{1,3}]
 \end{align*}
@@ -278,9 +277,10 @@ Z_{\text{total}} = TC_1*(W_{1,1} + W_{2,1} + R_{2,1}) + FC_1 * Y_1 \\
 </li>
 <li><p>The total inflow of waste to each site never exceeds the capacity the site can handle </p>
 </li>
-<li><p>Our variables reflect real-world scenario - <span class="math">$Y_j$</span> is binary, all other variables are always <span class="math">$\geq 0$</span></p>
+<li><p>Our variables reflect real-world scenario: &#40;i&#41; <span class="math">$Y_j$</span> is binary, &#40;ii&#41; all other variables are always <span class="math">$\geq 0$</span>, </p>
 </li>
 </ol>
+<p>&#40;iii&#41; no waste streams from sites are sent to the site they came from, and &#40;iv&#41; no ash can be sent from WTE to MRF</p>
 <p>Constraint #1 - Making sure waste flows &#61; city waste production:</p>
 <p class="math">\[
 W_{1,1} + W_{1,2} + W_{1,3} = S_1 \\
@@ -288,7 +288,7 @@ W_{2,1} + W_{2,2} + W_{2,3} = S_2 \\
 \]</p>
 <p>Constraint #2 - &#40;i&#41; Waste sent from WTE site &#61; mass of ash produced, and &#40;ii&#41; Waste sent from MRF subtracts the mass recycled:</p>
 <p class="math">\[
-R_{1,3} = \text{ash fraction} * (W_{1,1} + W_{2,1} + R_{2,1}) \\
+R_{1,3} = \text{ash fraction} * (W_{1,1} + W_{2,1}) + \text{ash fraction from recycled mass} * R_{2,1}) \\
 R_{2,1} + R_{2,3} = (1 - \text{fraction recycled}) * (W_{1,2} + W_{2,2}) \\
 \]</p>
 <p>Constraint #3 - Waste sites cannot handle more than their capacity:</p>
@@ -297,8 +297,10 @@ W_{1,1} + W_{2,1} + R_{2,1} \leq C_1 \\
 W_{1,2} + W_{2,2} \leq C_2 \\
 W_{1,3} + W_{2,3} + R_{1,3} + R_{2,3} \leq C_3 \\
 \]</p>
-<p>Constraint #4 - Ensuring variables remain in feasible range to reflect real-world scenario,  and that <span class="math">$Y_j = 0$</span> if no waste is sent to site j:</p>
+<p>Constraint #4 - Ensuring variables reflect real-world scenario</p>
 <p class="math">\[
+\text{i. Y remains binary variable} \\
+
 Y_1 =
 \begin{cases}
 0    &\text{if $W_{1,1} + W_{2,1} + R_{2,1} = 0$} \\
@@ -314,8 +316,16 @@ Y_2 =
 Y_3 = 1
 \]</p>
 <p class="math">\[
+\text{ii. non-negativity } \\
+
 W_{i,j} \geq 0 \\
-R_{k,j} \geq 0
+R_{k,j} \geq 0 \\
+
+\text{iii. no waste streams are "internally transferred" from site to itself } \\
+\sum_j{R{j,j}} = 0 \\ 
+
+\text{iv. no ash from WTE can be recycled } \\
+R_{1,2} = 0
 \]</p>
 <h2>Problem 1.5</h2>
 
@@ -490,11 +500,11 @@ y3 : Y[3] == 1.0</span>
  1.0</span>
 </pre>
 
-<p>From this, we can see that a minimum cost of X is achieved with the following waste flows:</p>
-<p>&#91;Insert diagram here&#93;</p>
+<p>From this, we can see that a minimum cost of &#36; <span class="math">$28,886$</span>/day is achieved with the following waste flows:</p>
+<p><img src="C:\Users\Caroline\Documents\bee4750\hw4-crh227\wasteflowsq1.PNG" alt="Figure 1. Waste Flows - Question 1" /></p>
 <h1>Problem 2</h1>
 <h2>Problem 2.1</h2>
-<p>The only changes needed for this added carbon tax are updated values for TC<a href="the tipping cost of WTE">1</a> and  to change the transportation cost from 1.5/Mg-km to 2/Mg-km. There is no need for additional constraints because  there is no environmental standard or limit on emissions; rather, the environmental impact of increased carbon  emissions will be reflected in increased costs. </p>
+<p>The only changes needed for this added carbon tax are to update the tipping cost of WTE from 60/Mg to 75/Mg and  to change the transportation cost from 1.5/Mg-km to 2/Mg-km. There is no need for additional constraints because  there is no environmental standard or limit on emissions; rather, the environmental impact of increased carbon  emissions will be reflected in increased costs. </p>
 <h2>Problem 2.2</h2>
 <p>Creating a new model with the added carbon tax included:</p>
 
@@ -649,9 +659,11 @@ y3 : Yc[3] == 1.0</span>
  1.0</span>
 </pre>
 
-<p>From this, we can see that a minimum cost of X is achieved with the following waste flows:</p>
-<p>&#91;Insert diagram here&#93;</p>
+<p>From this, we can see that a minimum cost of 33,127/day is achieved with the following waste flows:</p>
+<p><img src="C:\Users\Caroline\Documents\bee4750\hw4-crh227\wasteflowsq2.PNG" alt="Figure 2. Waste Flows with Carbon Tax Implemented - Question 2" /></p>
+<p>We can see that with this new carbon tax implemented, sending some waste to WTE &#40;option 1&#41; will no longer minimize the overall cost, since  the carbon tax caused the tipping cost of WTE to increase. Instead, now we will operate the MRF facility and send most of the waste from City 1  to this facility, and the rest of City 1 and all of City 2&#39;s waste to the landfill. This causes the overall minimum cost able to be  achieved to increase by ~4,200/day due to the increased transportation costs and new recycling costs.</p>
 <h1>References</h1>
+<p>I collaborated with Grace Yun to figure out the ash/recycled fractions and constraints.</p>
 
 
     <hr class="title">
